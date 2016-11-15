@@ -86,7 +86,7 @@ bot.on("message", msg => {
         msg.channel.sendMessage("!rude - Insults a random user in the channel.");
         msg.channel.sendMessage("!nice - Compliment a random user in the channel.");
         msg.channel.sendMessage("!haiku - Generates a random topic for haiku channel.");
-        msg.channel.sendMessage("!jeff - Spew out a message generated from previous channel messages.")
+        msg.channel.sendMessage("!jeff - Spew out a message generated from previous channel messages.");
     }
     /* Makes Jeff speak */
     if (msg.content.startsWith(prefix + "jeff")) {
