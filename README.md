@@ -1,10 +1,11 @@
 # parrot-bot
 A Discord Bot that repeats information collected from Discord Chat.
+
 Created By Matt Wenger
 
 ADD the following in MySQL:
 ---------------
-#
+
 
 	CREATE parrot_db;
 	USE parrot_db;
