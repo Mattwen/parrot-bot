@@ -12,15 +12,15 @@ ADD the following in MySQL:
 
 	CREATE TABLE word_table (
   	id INT(6) PRIMARY KEY AUTO_INCREMENT,
-  	name VARCHAR(255),
+  	word VARCHAR(255),
   	reg_date TIMESTAMP);
 
 	CREATE TABLE short_phrase_table (
   	id INT(6) PRIMARY KEY AUTO_INCREMENT,
-  	name VARCHAR(255),
+  	sentence VARCHAR(255),
   	reg_date TIMESTAMP);
   
 	CREATE TABLE long_phrase_table (
   	id int(6) PRIMARY KEY AUTO_INCREMENT,
-  	name VARCHAR(255),
+  	sentence VARCHAR(255),
   	reg_date TIMESTAMP);
