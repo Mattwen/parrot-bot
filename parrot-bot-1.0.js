@@ -17,6 +17,8 @@ var glob_short = [];
 var haiku = require("./lib/haiku.js");
 var insult = require("./lib/insult.js")
 var compliment = require("./lib/compliment.js")
+var trophy = require("./lib/trophies.js")
+
 
 /*-------- Discord API ------------*/
 var Discord = require('discord.js');
@@ -38,7 +40,7 @@ var con = mysql.createConnection({
 /*--------------------------------*/
 
 /* Establish a connection */
-con.connect(function(err) {
+con.connect(function (err) {
     if (err) {
         console.error('error connecting: ' + err.stack);
         return;
@@ -55,16 +57,13 @@ bot.on('ready', () => {
 /* listens for any responses */
 bot.on('message', (message) => {
     msg = message.content;
-    
-    var usr = message.author.username;
-    console.log(usr);
 
-    
+    var usr = message.author.username;
 
     wordCount = msg.split(' ');
 
-     var userEntry = {
-        
+    var userEntry = {
+
         username: usr,
         entry: getEntry(msg)
     };
@@ -82,9 +81,9 @@ bot.on('message', (message) => {
     if (wordCount.length >= 1) {
         /* Prevents Jeff from entering his own messages into the database */
         if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
-            con.query('INSERT INTO users SET ?', userEntry, function(err, res) {
+            con.query('INSERT INTO users SET ?', userEntry, function (err, res) {
                 if (err) throw err;
-                console.log('Last insert ID:', res.insertId);
+                console.log('A value was inserted! insert ID:', res.insertId);
             });
         }
     }
@@ -93,7 +92,7 @@ bot.on('message', (message) => {
     if (wordCount.length <= 3) {
         /* Prevents Jeff from entering his own messages into the database */
         if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
-            con.query('INSERT INTO word_table SET ?', value, function(err, res) {
+            con.query('INSERT INTO word_table SET ?', value, function (err, res) {
                 if (err) throw err;
                 console.log('Last insert ID:', res.insertId);
             });
@@ -102,7 +101,7 @@ bot.on('message', (message) => {
     if (wordCount.length >= 3) {
         /* Prevents Jeff from entering his own messages into the database */
         if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
-            con.query('INSERT INTO short_phrase_table SET ?', value2, function(err, res) {
+            con.query('INSERT INTO short_phrase_table SET ?', value2, function (err, res) {
                 if (err) throw err;
                 console.log('Last insert ID:', res.insertId);
             });
@@ -110,7 +109,7 @@ bot.on('message', (message) => {
     }
     if (wordCount.length > 3) {
         if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
-            con.query('INSERT INTO long_phrase_table SET ?', value3, function(err, res) {
+            con.query('INSERT INTO long_phrase_table SET ?', value3, function (err, res) {
                 if (err) throw err;
                 console.log('Last insert ID:', res.insertId);
             });
@@ -132,11 +131,11 @@ bot.on("message", msg => {
     if (msg.content.startsWith(prefix + "help")) {
         msg.channel.sendMessage("Here is a list of valid commands: ");
         msg.channel.sendMessage("----------------------------------");
-        msg.channel.sendMessage("!meme - Creates a meme.");
         msg.channel.sendMessage("!rude - Insults a random user in the channel.");
         msg.channel.sendMessage("!nice - Compliment a random user in the channel.");
         msg.channel.sendMessage("!haiku - Generates a random topic for haiku channel.");
         msg.channel.sendMessage("!jeff - Spew out a message generated from previous channel messages.");
+        msg.channel.sendMessage('!trophies - Lists all users haiku trophies.')
     }
     /* Makes Jeff speak */
     if (msg.content.startsWith(prefix + "jeff")) {
@@ -148,34 +147,40 @@ bot.on("message", msg => {
 
     } else if (msg.content.startsWith(prefix + "haiku")) {
         msg.channel.sendMessage(haiku.getHaikuTopic());
-        /* wipe local lists */
+    } else if (msg.content.startsWith(prefix + "trophies")) {
+        msg.channel.sendMessage(trophy.getTrophies());
+    } else if (msg.content.startsWith(prefix + "winner")) {
 
-    }
-    else if (msg.content.startsWith(prefix + "rude")) {
+        //do logic
+        //need to update the specific column
 
-         //msg.channel.sendMessage('hey ' + msg.author.username + '. Fuck you! bawk!');
-         //msg.channel.sendMessage('here is the list of channel users: ' + JSON.stringify(msg.channel.members));
-         var col = msg.channel.members;
-         //console.dir(col);
-         //console.log(col.first());
-         
-         var usr = col.random().user.username;
-         
-         msg.channel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
-         
+        var splitMsg = msg.content.split(' ');
+        secondWord = splitMsg[1];
+        updateTrophies(secondWord);
 
-    }
-    else if (msg.content.startsWith(prefix + "nice")) {
+    } else if (msg.content.startsWith(prefix + "rude")) {
+
+        //msg.channel.sendMessage('hey ' + msg.author.username + '. Fuck you! bawk!');
+        //msg.channel.sendMessage('here is the list of channel users: ' + JSON.stringify(msg.channel.members));
+        var col = msg.channel.members;
+        //console.dir(col);
+        //console.log(col.first());
+
+        var usr = col.random().user.username;
+
+        msg.channel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
+
+
+    } else if (msg.content.startsWith(prefix + "nice")) {
 
         /* Generate a compliment from a txt file wordlist */
-         var col = msg.channel.members;
-         /* retrieve a rnadom username from the chanlle list collection this operation might be expensive */
-         var usr = col.random().user.username;
-         /* later generate additional ways of forming a valid compliment */
-         msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() +  ' bawk!');
-         
-    }
-     else {
+        var col = msg.channel.members;
+        /* retrieve a rnadom username from the chanlle list collection this operation might be expensive */
+        var usr = col.random().user.username;
+        /* later generate additional ways of forming a valid compliment */
+        msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
+
+    } else {
         return;
     }
 });
@@ -229,19 +234,19 @@ function getShortPhrase(message) {
 
 function getEntry(message) {
     var wordList = message.split(' ');
-    var entry= '';
+    var entry = '';
     for (var i = 0; i < wordList.length; i++) {
-            /* Add the words to the local variable */
-            if (wordList[i] != "!jeff") {
-                entry += wordList[i];
-            }
-
-            /* If it's at the end of the word list do not add extra white space */
-            if (i != (wordList.length - 1)) {
-                entry += ' ';
-            }
+        /* Add the words to the local variable */
+        if (wordList[i] != "!jeff") {
+            entry += wordList[i];
         }
-    
+
+        /* If it's at the end of the word list do not add extra white space */
+        if (i != (wordList.length - 1)) {
+            entry += ' ';
+        }
+    }
+
     return entry;
 }
 
@@ -264,17 +269,17 @@ function doQueries() {
 
 
     /* Query for word_table */
-    con.query("SELECT * FROM word_table", function(err, rows) {
+    con.query("SELECT * FROM word_table", function (err, rows) {
         if (err) {
             throw err;
         } else {
-            console.log("Are rows being updated?", rows);
+
             setSQLWord(rows);
         }
     });
 
     /* Query for long_phrase_table */
-    con.query("SELECT * FROM long_phrase_table", function(err, rows) {
+    con.query("SELECT * FROM long_phrase_table", function (err, rows) {
         if (err) {
             throw err;
         } else {
@@ -283,7 +288,7 @@ function doQueries() {
         }
     });
     /* Query for short_phrase_table */
-    con.query("SELECT * FROM short_phrase_table", function(err, rows) {
+    con.query("SELECT * FROM short_phrase_table", function (err, rows) {
         if (err) {
             throw err;
         } else {
@@ -327,6 +332,7 @@ function getParrotMessage() {
     parrot_message += 'bawk!';
     return parrot_message;
 }
+
 function setSQLWord(value) {
 
 
@@ -351,6 +357,7 @@ function setSQLLong(value) {
         glob_long.push(json[i].sentence);
     }
 }
+
 function setSQLShort(value) {
 
     var str = JSON.stringify(value);
@@ -360,4 +367,57 @@ function setSQLShort(value) {
 
         glob_short.push(json[i].sentence);
     }
+}
+
+function updateTrophies(username) {
+
+    con.query("SELECT * FROM trophies", function (err, rows) {
+        if (err) {
+            throw err;
+        } else {
+            usrList = [];
+            for (var i = 0; i < rows.length; i++) {
+
+                usrList.push(rows[i].username);
+
+            }
+            console.log("Here is your list of users. ", usrList);
+            if (usrList.includes(username)) {
+                console.log('it already exists');
+                con.query("SELECT * FROM trophies WHERE username= ?", [username], function (err, rows) {
+        if (err) {
+
+            throw err;
+        } else {
+            var str = JSON.stringify(rows);
+            var json = JSON.parse(str);
+            var val = json[0].trophy_count;
+            val += 1
+            con.query('UPDATE trophies SET trophy_count= ? Where username = ?', [val, username],
+                function (err, result) {
+                    if (err) throw err;
+
+                    console.log('Changed ' + result.changedRows + ' rows');
+                }
+            );
+        }
+    });
+            } else {
+                console.log('it does not exist');
+                var entry = {
+                    username: username,
+                    trophy_count: 1
+                };
+                con.query('INSERT INTO trophies SET ?', entry, function (err, res) {
+                    if (err) throw err;
+
+                    console.log('Created a new entry! insert ID:', res.insertId);
+                });
+
+            }
+
+        }
+    });
+
+    
 }
