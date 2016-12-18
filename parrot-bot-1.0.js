@@ -15,6 +15,8 @@ var glob_short = [];
 
 
 var haiku = require("./lib/haiku.js");
+var insult = require("./lib/insult.js")
+var compliment = require("./lib/compliment.js")
 
 /*-------- Discord API ------------*/
 var Discord = require('discord.js');
@@ -22,7 +24,7 @@ var bot = new Discord.Client();
 /*---------------------------------*/
 
 /* ------ Bot login Token ------ */
-bot.login('MjQ2ODcxMzAyNzAxMzE4MTU1.Cwg9AQ.h0Jzd3AhxSI3ctF8ivz-fRjZvdU');
+bot.login('MjU5NDk4MTUxNzA5MjQ1NDUw.CzeAQA.RlqGT3AQQVaGWItSlqXK0Eme_a0');
 /* ----------------------------- */
 
 /*----------- MySQL -------------*/
@@ -53,8 +55,19 @@ bot.on('ready', () => {
 /* listens for any responses */
 bot.on('message', (message) => {
     msg = message.content;
+    
+    var usr = message.author.username;
+    console.log(usr);
+
+    
 
     wordCount = msg.split(' ');
+
+     var userEntry = {
+        
+        username: usr,
+        entry: getEntry(msg)
+    };
 
     var value = {
         word: getRandomWord(msg)
@@ -66,6 +79,15 @@ bot.on('message', (message) => {
         sentence: getLongPhrase(msg)
     };
 
+    if (wordCount.length >= 1) {
+        /* Prevents Jeff from entering his own messages into the database */
+        if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
+            con.query('INSERT INTO users SET ?', userEntry, function(err, res) {
+                if (err) throw err;
+                console.log('Last insert ID:', res.insertId);
+            });
+        }
+    }
 
     console.log("message length: ", wordCount.length);
     if (wordCount.length <= 3) {
@@ -95,6 +117,7 @@ bot.on('message', (message) => {
         }
     }
 });
+
 
 /* for ! prefixes */
 bot.on("message", msg => {
@@ -127,7 +150,32 @@ bot.on("message", msg => {
         msg.channel.sendMessage(haiku.getHaikuTopic());
         /* wipe local lists */
 
-    } else {
+    }
+    else if (msg.content.startsWith(prefix + "rude")) {
+
+         //msg.channel.sendMessage('hey ' + msg.author.username + '. Fuck you! bawk!');
+         //msg.channel.sendMessage('here is the list of channel users: ' + JSON.stringify(msg.channel.members));
+         var col = msg.channel.members;
+         //console.dir(col);
+         //console.log(col.first());
+         
+         var usr = col.random().user.username;
+         
+         msg.channel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
+         
+
+    }
+    else if (msg.content.startsWith(prefix + "nice")) {
+
+        /* Generate a compliment from a txt file wordlist */
+         var col = msg.channel.members;
+         /* retrieve a rnadom username from the chanlle list collection this operation might be expensive */
+         var usr = col.random().user.username;
+         /* later generate additional ways of forming a valid compliment */
+         msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() +  ' bawk!');
+         
+    }
+     else {
         return;
     }
 });
@@ -179,6 +227,24 @@ function getShortPhrase(message) {
     }
 }
 
+function getEntry(message) {
+    var wordList = message.split(' ');
+    var entry= '';
+    for (var i = 0; i < wordList.length; i++) {
+            /* Add the words to the local variable */
+            if (wordList[i] != "!jeff") {
+                entry += wordList[i];
+            }
+
+            /* If it's at the end of the word list do not add extra white space */
+            if (i != (wordList.length - 1)) {
+                entry += ' ';
+            }
+        }
+    
+    return entry;
+}
+
 /* Gets the word at the given location in a sentence ex. 0 for first word, 1, for second word in sentence .. etc */
 function getRandomWord(message) {
 
@@ -195,6 +261,7 @@ function getRandomWord(message) {
 }
 
 function doQueries() {
+
 
     /* Query for word_table */
     con.query("SELECT * FROM word_table", function(err, rows) {
@@ -237,19 +304,10 @@ function getParrotMessage() {
 
 
 
-
-    //r = Math.floor(Math.random() * 3) + 1;
-    // word list
-
-
-    //console.log("word list: ", wordList);
-
-
     r = Math.floor(Math.random() * 3) + 1;
 
 
     // short word list
-
 
     console.log("word phrase list: ", glob_word);
     console.log("short phrase list: ", glob_short);
@@ -288,7 +346,6 @@ function setSQLLong(value) {
     var json = JSON.parse(str);
 
     // long word list
-
     for (var i = 0; i < value.length; i++) {
 
         glob_long.push(json[i].sentence);
@@ -304,11 +361,3 @@ function setSQLShort(value) {
         glob_short.push(json[i].sentence);
     }
 }
-
-
-
-
-
-
-
-
