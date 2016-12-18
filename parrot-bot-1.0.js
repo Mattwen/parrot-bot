@@ -231,7 +231,7 @@ function getShortPhrase(message) {
         return shortPhrase;
     }
 }
-
+/* Function that gets the entire msg and puts it in a users SQL table later */
 function getEntry(message) {
     var wordList = message.split(' ');
     var entry = '';
@@ -302,12 +302,11 @@ function getParrotMessage() {
     /* [word] [word] [long_phrase] [short_phrase] [word] [word]*/
     var parrot_message = '';
 
+    /* Not used yet */
     var additionalWordLength = Math.floor(Math.random() * 3) + 1;
     var additionalWordLength2 = Math.floor(Math.random() * 3) + 1;
     var subPhrase = '';
     var subPhrase2 = '';
-
-
 
     r = Math.floor(Math.random() * 3) + 1;
 
@@ -318,6 +317,7 @@ function getParrotMessage() {
     console.log("short phrase list: ", glob_short);
     console.log("long word list: ", glob_long);
 
+    /*Random selection of words and phrases from local data */
     w = glob_word[Math.floor(Math.random() * glob_word.length)];
     l = glob_long[Math.floor(Math.random() * glob_long.length)];
     s = glob_short[Math.floor(Math.random() * glob_short.length)];
@@ -371,46 +371,54 @@ function setSQLShort(value) {
 
 function updateTrophies(username) {
 
+    /* Basic query on entire table */
     con.query("SELECT * FROM trophies", function (err, rows) {
         if (err) {
             throw err;
         } else {
+
             usrList = [];
             for (var i = 0; i < rows.length; i++) {
-
+                /* Pushes all users in local array */
                 usrList.push(rows[i].username);
-
             }
-            console.log("Here is your list of users. ", usrList);
+            /* If the user already exists we don't want to create a new user we want to update it*/
             if (usrList.includes(username)) {
                 console.log('it already exists');
+                /*Select all data with the username passed down */
                 con.query("SELECT * FROM trophies WHERE username= ?", [username], function (err, rows) {
-        if (err) {
+                    if (err) {
 
-            throw err;
-        } else {
-            var str = JSON.stringify(rows);
-            var json = JSON.parse(str);
-            var val = json[0].trophy_count;
-            val += 1
-            con.query('UPDATE trophies SET trophy_count= ? Where username = ?', [val, username],
-                function (err, result) {
-                    if (err) throw err;
-
-                    console.log('Changed ' + result.changedRows + ' rows');
-                }
-            );
-        }
-    });
+                        throw err;
+                    } else {
+                        /*Parse data so it can be used more easily */
+                        var str = JSON.stringify(rows);
+                        var json = JSON.parse(str);
+                        /* Get the value of user trophies and store it */
+                        var val = json[0].trophy_count;
+                        /* Simply adds a new trophy to existing count */
+                        val += 1
+                            /* Does the query to update mySQL data */
+                        con.query('UPDATE trophies SET trophy_count= ? Where username = ?', [val, username],
+                            function (err, result) {
+                                if (err) throw err;
+                                console.log('Changed ' + result.changedRows + ' rows');
+                            }
+                        );
+                    }
+                });
             } else {
+                /* The username does not already exist in MYSQL so it will create a new entry */
                 console.log('it does not exist');
+
+                /* single entry var for username and trophy_count field */
                 var entry = {
                     username: username,
                     trophy_count: 1
                 };
+                /* Put them in the trophies table */
                 con.query('INSERT INTO trophies SET ?', entry, function (err, res) {
                     if (err) throw err;
-
                     console.log('Created a new entry! insert ID:', res.insertId);
                 });
 
@@ -419,5 +427,5 @@ function updateTrophies(username) {
         }
     });
 
-    
+
 }
