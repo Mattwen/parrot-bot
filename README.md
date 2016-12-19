@@ -36,3 +36,8 @@ ADD the following in MySQL:
 	username VARCHAR(255),
 	trophy_count VARCHAR(255),
 	date TIMESTAMP);
+	
+	CREATE TABLE links (
+	id int(6) PRIMARY KEY AUTO_INCREMENT,
+	link VARCHAR(255),
+	date TIMESTAMP);
