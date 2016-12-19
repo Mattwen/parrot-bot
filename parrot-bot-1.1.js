@@ -1,18 +1,24 @@
-/*Parrot-Bot AKA Jeff The Parrot 
+/*Parrot-Bot AKA jeff The Parrot 
 Created By Matt Wenger */
 
 
 /* To do 
 - Restructure entire bot around MySQL 
 - Implement !Haiku and !meme functions
--
+- 
 
 */
 
-var glob_word = [];
-var glob_long = [];
-var glob_short = [];
+//setting globals because queries must be asynchronous
+var timer = null;
 
+var glob_word = [];
+var glob_short = [];
+var glob_long = [];
+
+var wordQ = false;
+var shortQ = false;
+var longQ = false;
 
 var haiku = require("./lib/haiku.js");
 var insult = require("./lib/insult.js")
@@ -20,6 +26,7 @@ var compliment = require("./lib/compliment.js")
 var trophy = require("./lib/trophies.js")
 
 
+//______________________________________INITIALIZING THE BOT________________________________________
 /*-------- Discord API ------------*/
 var Discord = require('discord.js');
 var bot = new Discord.Client();
@@ -50,17 +57,16 @@ con.connect(function (err) {
 
 /* Turns on bot, ready for listening. */
 bot.on('ready', () => {
-    console.log('Jeff is ready!');
+    console.log('jeff is ready!');
 });
 
 
 /* listens for any responses */
-bot.on('message', (message) => {
+bot.on('message', (message) => {//______________________HANDLING MESSAGE INPUT_______________________________
     msg = message.content;
 
-    var usr = message.author.username;
-
     wordCount = msg.split(' ');
+    var usr = message.author.username;
 
     var userEntry = {
 
@@ -88,65 +94,77 @@ bot.on('message', (message) => {
         }
     }
 
+    var regex = /https?:\/\/\S*\.?\S+/g;
+    var matchArray = msg.match(regex);
+    var foundLink = false;
+    if (matchArray) foundLink = true;
+
+
     console.log("message length: ", wordCount.length);
-    if (wordCount.length <= 3) {
-        /* Prevents Jeff from entering his own messages into the database */
-        if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
+    /* Prevents jeff from entering his own messages into the database */
+    if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
+        if (wordCount.length <= 3) {
             con.query('INSERT INTO word_table SET ?', value, function (err, res) {
                 if (err) throw err;
-                console.log('Last insert ID:', res.insertId);
+                console.log('Last insert to word_table ID:', res.insertId);
             });
         }
-    }
-    if (wordCount.length >= 3) {
-        /* Prevents Jeff from entering his own messages into the database */
-        if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
+        if (wordCount.length >= 3) {
             con.query('INSERT INTO short_phrase_table SET ?', value2, function (err, res) {
                 if (err) throw err;
-                console.log('Last insert ID:', res.insertId);
+                console.log('Last insert to short_phrase_table ID:', res.insertId);
             });
         }
-    }
-    if (wordCount.length > 3) {
-        if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
+        if (wordCount.length > 3) {
             con.query('INSERT INTO long_phrase_table SET ?', value3, function (err, res) {
                 if (err) throw err;
-                console.log('Last insert ID:', res.insertId);
+                console.log('Last insert to long_phrase_table ID:', res.insertId);
             });
+        }
+        if (foundLink) {
+            for (var i = 0; i < matchArray.length; i++) {
+
+                con.query('INSERT INTO links SET link= ' + con.escape(matchArray[i]), function (err, res) {
+                    if (err) throw err;
+                    console.log('Last insert to links ID:', res.insertId);
+                });
+            }
         }
     }
 });
 
-
 /* for ! prefixes */
-bot.on("message", msg => {
+bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______________________________
 
     // Set the prefix
     let prefix = "!";
 
     // Exit and stop if it's not there
-    if (!msg.content.startsWith(prefix)) return;
+    if (!msg.content.startsWith(prefix)) {
+        return;
+    }
 
     /* If anyone in any chat types !help, will print multi line command list */
     if (msg.content.startsWith(prefix + "help")) {
         msg.channel.sendMessage("Here is a list of valid commands: ");
         msg.channel.sendMessage("----------------------------------");
+        msg.channel.sendMessage("!meme - Creates a meme.");
         msg.channel.sendMessage("!rude - Insults a random user in the channel.");
         msg.channel.sendMessage("!nice - Compliment a random user in the channel.");
         msg.channel.sendMessage("!haiku - Generates a random topic for haiku channel.");
         msg.channel.sendMessage("!jeff - Spew out a message generated from previous channel messages.");
         msg.channel.sendMessage('!trophies - Lists all users haiku trophies.')
     }
-    /* Makes Jeff speak */
+    /* Makes jeff speak */
     if (msg.content.startsWith(prefix + "jeff")) {
-        msg.channel.sendMessage(getParrotMessage());
+        getMessageParts();
         /* wipe local lists */
-        doQueries();
-
-
 
     } else if (msg.content.startsWith(prefix + "haiku")) {
         msg.channel.sendMessage(haiku.getHaikuTopic());
+        /* wipe local lists */
+
+
     } else if (msg.content.startsWith(prefix + "trophies")) {
         msg.channel.sendMessage(trophy.getTrophies());
     } else if (msg.content.startsWith(prefix + "winner")) {
@@ -172,6 +190,7 @@ bot.on("message", msg => {
 
 
     } else if (msg.content.startsWith(prefix + "nice")) {
+        /* wipe local lists */
 
         /* Generate a compliment from a txt file wordlist */
         var col = msg.channel.members;
@@ -179,11 +198,33 @@ bot.on("message", msg => {
         var usr = col.random().user.username;
         /* later generate additional ways of forming a valid compliment */
         msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
+    }
+    else if (msg.content.startsWith(prefix + "link")) {
+        getLink()
+        /* wipe local lists */
 
     } else {
         return;
     }
 });
+/* Function that gets the entire msg and puts it in a users SQL table later */
+function getEntry(message) {
+    var wordList = message.split(' ');
+    var entry = '';
+    for (var i = 0; i < wordList.length; i++) {
+        /* Add the words to the local variable */
+        if (wordList[i] != "!jeff") {
+            entry += wordList[i];
+        }
+
+        /* If it's at the end of the word list do not add extra white space */
+        if (i != (wordList.length - 1)) {
+            entry += ' ';
+        }
+    }
+
+    return entry;
+}
 
 /* Preps the message for long phrase SQL entry */
 function getLongPhrase(message) {
@@ -231,27 +272,9 @@ function getShortPhrase(message) {
         return shortPhrase;
     }
 }
-/* Function that gets the entire msg and puts it in a users SQL table later */
-function getEntry(message) {
-    var wordList = message.split(' ');
-    var entry = '';
-    for (var i = 0; i < wordList.length; i++) {
-        /* Add the words to the local variable */
-        if (wordList[i] != "!jeff") {
-            entry += wordList[i];
-        }
-
-        /* If it's at the end of the word list do not add extra white space */
-        if (i != (wordList.length - 1)) {
-            entry += ' ';
-        }
-    }
-
-    return entry;
-}
 
 /* Gets the word at the given location in a sentence ex. 0 for first word, 1, for second word in sentence .. etc */
-function getRandomWord(message) {
+function getRandomWord(message) { //NOT SURE IF I AGREE WITH THIS, WE SHOULD JUST INSERT EVERY NEW WORD INTO DB
 
     var wordList = message.split(' ');
     var randomWord = '';
@@ -265,62 +288,82 @@ function getRandomWord(message) {
     return randomWord;
 }
 
-function doQueries() {
+//////////////////////////////////////////B O T    F U N C T I O N S //////////////////////////////////////////////////////
 
+/* Needs to pull from MySQL */
+function getMessageParts() { //CREATES A SENTENCE FOR THE BOT TO SAY
+
+    //======================running queries===========================
 
     /* Query for word_table */
-    con.query("SELECT * FROM word_table", function (err, rows) {
+    con.query("SELECT word FROM word_table", function (err, rows) {
         if (err) {
             throw err;
         } else {
+            var str = JSON.stringify(rows);
+            var json = JSON.parse(str);
 
-            setSQLWord(rows);
+            for (var i = 0; i < rows.length; i++) {
+
+                //console.log('global: ', glob_word[i].word);
+                glob_word.push(json[i].word);
+            }
+            wordQ = true;
+        }
+    });
+
+    /* Query for short_phrase_table */
+    con.query("SELECT sentence FROM short_phrase_table", function (err, rows) {
+        if (err) {
+            throw err;
+        } else {
+            var str = JSON.stringify(rows);
+            var json = JSON.parse(str);
+
+            for (var i = 0; i < rows.length; i++) {
+                glob_short.push(json[i].sentence);
+            }
+            shortQ = true;
         }
     });
 
     /* Query for long_phrase_table */
-    con.query("SELECT * FROM long_phrase_table", function (err, rows) {
+    con.query("SELECT sentence FROM long_phrase_table", function (err, rows) {
         if (err) {
             throw err;
         } else {
+            var str = JSON.stringify(rows);
+            var json = JSON.parse(str);
 
-            setSQLLong(rows);
+            for (var i = 0; i < rows.length; i++) {
+                glob_long.push(json[i].sentence);
+            }
+            longQ = true;
         }
     });
-    /* Query for short_phrase_table */
-    con.query("SELECT * FROM short_phrase_table", function (err, rows) {
-        if (err) {
-            throw err;
-        } else {
-            setSQLShort(rows);
-        }
-    });
+
+    //query response feedback
+    timer = setInterval(checkQueryResponse, 200);
+
 }
-/* Needs to pull from MySQL */
-function getParrotMessage() {
-
+function sendParrotMessage(words, shortPhrases, longPhrases) {
     /* [word] [word] [long_phrase] [short_phrase] [word] [word]*/
     var parrot_message = '';
 
-    /* Not used yet */
     var additionalWordLength = Math.floor(Math.random() * 3) + 1;
     var additionalWordLength2 = Math.floor(Math.random() * 3) + 1;
     var subPhrase = '';
     var subPhrase2 = '';
 
     r = Math.floor(Math.random() * 3) + 1;
-
-
-    // short word list
-
-    console.log("word phrase list: ", glob_word);
-    console.log("short phrase list: ", glob_short);
-    console.log("long word list: ", glob_long);
-
-    /*Random selection of words and phrases from local data */
-    w = glob_word[Math.floor(Math.random() * glob_word.length)];
-    l = glob_long[Math.floor(Math.random() * glob_long.length)];
-    s = glob_short[Math.floor(Math.random() * glob_short.length)];
+    /*
+    console.log("word phrase list: ", words);
+    console.log("short phrase list: ", shortPhrases);
+    console.log("long word list: ", longPhrases);
+    */
+    w = words[Math.floor(Math.random() * words.length)];
+    s = shortPhrases[Math.floor(Math.random() * shortPhrases.length)];
+    l = longPhrases[Math.floor(Math.random() * longPhrases.length)];
 
     //constructs a message
     parrot_message += w;
@@ -330,45 +373,48 @@ function getParrotMessage() {
     parrot_message += l;
     parrot_message += ' ';
     parrot_message += 'bawk!';
-    return parrot_message;
+    bot.channels.first().sendMessage(parrot_message);
 }
 
-function setSQLWord(value) {
+function getLink() {
+    con.query("SELECT link FROM links ORDER BY RAND() LIMIT 1", function (err, rows) {
+        if (err) {
+            throw err;
+        } else {
+            var str = JSON.stringify(rows);
+            var json = JSON.parse(str);
+            bot.channels.first().sendMessage(json[0].link);
+        }
+    });
+}
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    var str = JSON.stringify(value);
-    var json = JSON.parse(str);
+function replaceAll(str, find, replace) {
+    return str.replace(new RegExp(find, 'g'), replace);
+}
 
-    for (var i = 0; i < value.length; i++) {
+function checkQueryResponse() {
+    /*
+    console.log("___________Waiting on queries___________");
+    if(wordQ) console.log("words query: complete");
+    else console.log("words query: running...");
 
-        //console.log('global: ', glob_word[i].word);
-        glob_word.push(json[i].word);
+    if(shortQ) console.log("short_phrase query: complete");
+    else console.log("short_phrase query: running...");
+
+    if(longQ) console.log("long_phrase query: complete");
+    else console.log("long_phrase query: running...");
+    */
+
+    if (wordQ && shortQ && longQ) {
+        sendParrotMessage(glob_word, glob_short, glob_long);
+        clearInterval(timer);
+        timer = null;
+    } else {
+        console.log("Queries are running...");
     }
 }
-
-function setSQLLong(value) {
-
-    var str = JSON.stringify(value);
-    var json = JSON.parse(str);
-
-    // long word list
-    for (var i = 0; i < value.length; i++) {
-
-        glob_long.push(json[i].sentence);
-    }
-}
-
-function setSQLShort(value) {
-
-    var str = JSON.stringify(value);
-    var json = JSON.parse(str);
-
-    for (var i = 0; i < value.length; i++) {
-
-        glob_short.push(json[i].sentence);
-    }
-}
-
 function updateTrophies(username) {
 
     /* Basic query on entire table */
@@ -398,7 +444,7 @@ function updateTrophies(username) {
                         var val = json[0].trophy_count;
                         /* Simply adds a new trophy to existing count */
                         val += 1
-                            /* Does the query to update mySQL data */
+                        /* Does the query to update mySQL data */
                         con.query('UPDATE trophies SET trophy_count= ? Where username = ?', [val, username],
                             function (err, result) {
                                 if (err) throw err;

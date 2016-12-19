@@ -24,3 +24,20 @@ ADD the following in MySQL:
   	id int(6) PRIMARY KEY AUTO_INCREMENT,
   	sentence VARCHAR(255),
   	reg_date TIMESTAMP);
+	
+	CREATE TABLE users (
+	id int(6) PRIMARY KEY AUTO_INCREMENT,
+	username VARCHAR(255),
+	entry VARCHAR(255),
+	date TIMESTAMP);
+	
+	CREATE TABLE trophies (
+	id int(6) PRIMARY KEY AUTO_INCREMENT,
+	username VARCHAR(255),
+	trophy_count VARCHAR(255),
+	date TIMESTAMP);
+	
+	CREATE TABLE links (
+	id int(6) PRIMARY KEY AUTO_INCREMENT,
+	link VARCHAR(255),
+	date TIMESTAMP);
