@@ -71,3 +71,27 @@ USE parrot_db;
 	PRIMARY KEY (id),
 	FOREIGN KEY (usr_id) REFERENCES users(usr_id)
 	);
+
+	--pulling--
+	--make sure you're in the right branch--
+git branch 
+
+	--your selected branch with have * next to it--
+git checkout <branch> 
+
+	--pull from github master--
+git pull <url>
+
+	--if you get an error you might need to stash your shit--
+git stash
+
+then git pull <url>
+
+
+	--push to a branch in git--
+
+git add .
+git commit -m "message"
+git push origin <branch>
+
+
