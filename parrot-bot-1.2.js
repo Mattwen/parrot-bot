@@ -498,6 +498,3 @@ function updateTrophies(username) {
 
         }
     });
-
-
-}
