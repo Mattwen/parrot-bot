@@ -11,10 +11,7 @@ Created By Matt Wenger, fixed by Zane Webb */
 
 //setting globals because queries must be asynchronous
 var timer = null;
-<<<<<<< HEAD
 var currentChannel = null;
-=======
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
 
 var glob_word = [];
 var glob_short = [];
@@ -160,12 +157,9 @@ bot.on('message', (message) => {//______________________HANDLING MESSAGE INPUT__
 /* for ! prefixes */
 bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______________________________
 
-<<<<<<< HEAD
     //set the channel that it will respond into
     currentChannel = msg.channel;
 
-=======
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
     // Set the prefix
     let prefix = "!";
 
@@ -215,12 +209,7 @@ bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______
         //console.log(col.first());
 
         var usr = col.random().user.username;
-
-<<<<<<< HEAD
         currentChannel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
-=======
-        msg.channel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
 
 
     } else if (msg.content.startsWith(prefix + "nice")) {
@@ -231,11 +220,7 @@ bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______
         /* retrieve a rnadom username from the chanlle list collection this operation might be expensive */
         var usr = col.random().user.username;
         /* later generate additional ways of forming a valid compliment */
-<<<<<<< HEAD
         currentChannel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
-=======
-        msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
     }
     else if (msg.content.startsWith(prefix + "link")) {
         getLink()
@@ -411,12 +396,9 @@ function sendParrotMessage(words, shortPhrases, longPhrases) {
     parrot_message += l;
     parrot_message += ' ';
     parrot_message += 'bawk!';
-<<<<<<< HEAD
+
     currentChannel.sendMessage(parrot_message);
     //console.log(currentChannel);
-=======
-    bot.channels.first().sendMessage(parrot_message);
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
 }
 
 function getLink() {
@@ -426,11 +408,8 @@ function getLink() {
         } else {
             var str = JSON.stringify(rows);
             var json = JSON.parse(str);
-<<<<<<< HEAD
+            
             currentChannel.sendMessage(json[0].link);
-=======
-            bot.channels.first().sendMessage(json[0].link);
->>>>>>> 3818b4e0722db666bc8fbbc717b69df6fee8057e
         }
     });
 }
