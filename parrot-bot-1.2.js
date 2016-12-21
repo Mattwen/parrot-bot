@@ -1,5 +1,5 @@
 /*Parrot-Bot AKA jeff The Parrot 
-Created By Matt Wenger */
+Created By Matt Wenger, fixed by Zane Webb */
 
 
 /* To do 
@@ -11,6 +11,7 @@ Created By Matt Wenger */
 
 //setting globals because queries must be asynchronous
 var timer = null;
+var currentChannel = null;
 
 var glob_word = [];
 var glob_short = [];
@@ -33,7 +34,7 @@ var bot = new Discord.Client();
 /*---------------------------------*/
 
 /* ------ Bot login Token ------ */
-bot.login('MjQ4MzMyNjY2NTI3NTQ3Mzky.CzoNvQ.M4EDmg5SebcgIfxRcjlhRm0etmE');
+bot.login('MjQ4MzMyNjY2NTI3NTQ3Mzky.Czu46g.ctt7HtkEiQxEfW-G9tRotayJkxs');
 /* ----------------------------- */
 
 /*----------- MySQL -------------*/
@@ -42,7 +43,8 @@ var con = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "IDONTLikeMemes",
-    database: "parrot_db"
+    database: "parrot_db",
+    charset: "utf8mb4_bin"
 });
 /*--------------------------------*/
 
@@ -66,32 +68,26 @@ bot.on('message', (message) => {//______________________HANDLING MESSAGE INPUT__
     msg = message.content;
 
     wordCount = msg.split(' ');
-    var usr = message.author.username;
+    var userID = message.author.id
 
-    var userEntry = {
-        username: usr,
-        entry: getEntry(msg)
+    //building the json for the rows of each table
+    var userRow = {
+        usr_id: userID,
+        username: message.author.username
     };
 
-    var value = {
+    var wordRow = {
+        usr_id: userID,
         word: getRandomWord(msg)
     };
-    var value2 = {
+    var shortRow = {
+        usr_id: userID,
         sentence: getShortPhrase(msg)
     };
-    var value3 = {
+    var longRow = {
+        usr_id: userID,
         sentence: getLongPhrase(msg)
     };
-
-    if (wordCount.length >= 1) {
-        /* Prevents Jeff from entering his own messages into the database */
-        if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
-            con.query('INSERT INTO users SET ?', userEntry, function (err, res) {
-                if (err) throw err;
-                console.log('A value was inserted! insert ID:', res.insertId);
-            });
-        }
-    }
 
     //determining if there was a link in the message
     var regex = /https?:\/\/\S*\.?\S+/g;
@@ -104,30 +100,54 @@ bot.on('message', (message) => {//______________________HANDLING MESSAGE INPUT__
     /* Prevents jeff from entering his own messages into the database */
     if (!msg.includes("!jeff") && (!msg.includes('bawk!') && (!msg[0].includes('!')))) {
         //Sort the input into the correct tables
-        if (wordCount.length <= 3) {
-            con.query('INSERT INTO word_table SET ?', value, function (err, res) {
-                if (err) throw err;
-                console.log('Last insert to word_table ID:', res.insertId);
+        if (wordCount.length >= 1) {
+            con.query('INSERT INTO users SET ?', userRow, function (err, res) {
+                    if (err){
+                        if(err.code == "ER_DUP_ENTRY"){}//do nothing if there was a dup entry in the usr_id
+                        else throw err;
+                    }
+                    else console.log('Last insert to users ID:', res.insertId);
             });
         }
+        //words_table insert
+        if (wordCount.length <= 3) {
+            con.query('INSERT INTO word_table SET ?', wordRow, function (err, res) {
+                if (err){
+                        if(err.code == "ER_DUP_ENTRY"){}//do nothing if there was a dup entry in the word
+                        else throw err;
+                }
+                else console.log('Last insert to word_table ID:', res.insertId);
+            });
+        }
+        //short_phrase_table insert
         if (wordCount.length >= 3) {
-            con.query('INSERT INTO short_phrase_table SET ?', value2, function (err, res) {
+            con.query('INSERT INTO short_phrase_table SET ?', shortRow, function (err, res) {
                 if (err) throw err;
                 console.log('Last insert to short_phrase_table ID:', res.insertId);
             });
         }
+        //long_phrase_table insert
         if (wordCount.length > 3) {
-            con.query('INSERT INTO long_phrase_table SET ?', value3, function (err, res) {
+            con.query('INSERT INTO long_phrase_table SET ?', longRow, function (err, res) {
                 if (err) throw err;
                 console.log('Last insert to long_phrase_table ID:', res.insertId);
             });
         }
+        //links insert
         if (foundLink) {
+            ///there can be many links found in one message
             for (var i = 0; i < matchArray.length; i++) {
-
-                con.query('INSERT INTO links SET link= ' + con.escape(matchArray[i]), function (err, res) {
-                    if (err) throw err;
-                    console.log('Last insert to links ID:', res.insertId);
+                var linkRow = {//build the json for the row
+                    usr_id: userID,
+                    link:con.escape(matchArray[i])
+                };
+                //add the row
+                con.query('INSERT INTO links SET ?' , linkRow, function (err, res) {
+                    if (err){
+                        if(err.code == "ER_DUP_ENTRY"){}//do nothing if there was a dup entry in the link
+                        else throw err;
+                    }
+                    else console.log('Last insert to word_table ID:', res.insertId);
                 });
             }
         }
@@ -136,6 +156,9 @@ bot.on('message', (message) => {//______________________HANDLING MESSAGE INPUT__
 
 /* for ! prefixes */
 bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______________________________
+
+    //set the channel that it will respond into
+    currentChannel = msg.channel;
 
     // Set the prefix
     let prefix = "!";
@@ -187,7 +210,7 @@ bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______
 
         var usr = col.random().user.username;
 
-        msg.channel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
+        currentChannel.sendMessage('hey ' + usr + ' ' + insult.getInsult() + ' bawk!');
 
 
     } else if (msg.content.startsWith(prefix + "nice")) {
@@ -198,7 +221,7 @@ bot.on("message", msg => { //______________________HANDLING COMMAND INPUT_______
         /* retrieve a rnadom username from the chanlle list collection this operation might be expensive */
         var usr = col.random().user.username;
         /* later generate additional ways of forming a valid compliment */
-        msg.channel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
+        currentChannel.sendMessage('hey ' + usr + ' ' + compliment.getCompliment() + ' bawk!');
     }
     else if (msg.content.startsWith(prefix + "link")) {
         getLink()
@@ -374,7 +397,8 @@ function sendParrotMessage(words, shortPhrases, longPhrases) {
     parrot_message += l;
     parrot_message += ' ';
     parrot_message += 'bawk!';
-    bot.channels.first().sendMessage(parrot_message);
+    currentChannel.sendMessage(parrot_message);
+    //console.log(currentChannel);
 }
 
 function getLink() {
@@ -384,7 +408,7 @@ function getLink() {
         } else {
             var str = JSON.stringify(rows);
             var json = JSON.parse(str);
-            bot.channels.first().sendMessage(json[0].link);
+            currentChannel.sendMessage(json[0].link);
         }
     });
 }
