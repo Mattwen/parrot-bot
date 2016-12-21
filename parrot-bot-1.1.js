@@ -373,7 +373,7 @@ function sendParrotMessage(words, shortPhrases, longPhrases) {
     parrot_message += l;
     parrot_message += ' ';
     parrot_message += 'bawk!';
-    bot.channels.first().sendMessage(parrot_message);
+    bot.channels.last().sendMessage(parrot_message);
 }
 
 function getLink() {
