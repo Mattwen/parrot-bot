@@ -34,16 +34,16 @@ var bot = new Discord.Client();
 /*---------------------------------*/
 
 /* ------ Bot login Token ------ */
-bot.login('MjQ4MzMyNjY2NTI3NTQ3Mzky.Czu46g.ctt7HtkEiQxEfW-G9tRotayJkxs');
+bot.login('xxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 /* ----------------------------- */
 
 /*----------- MySQL -------------*/
 var mysql = require('mysql');
 var con = mysql.createConnection({
     host: "localhost",
-    user: "root",
-    password: "IDONTLikeMemes",
-    database: "parrot_db",
+    user: "xxxxxxxxxxxx",
+    password: "xxxxxxxxxx",
+    database: "xxxxxxxxxxxx",
     charset: "utf8mb4_bin"
 });
 /*--------------------------------*/
